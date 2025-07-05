@@ -4,8 +4,10 @@ import traceback
 from flask import Flask, request, jsonify
 from youtube_transcript_api import YouTubeTranscriptApi
 from urllib.parse import urlparse, parse_qs
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 app = Flask(__name__)
+
 
 PROXY_LIST = [
   "47.236.163.74:8080",
@@ -170,24 +172,33 @@ PROXY_LIST = [
   "204.157.251.210:999"
 ]
 
-def get_working_proxy():
+def check_proxy(proxy):
     test_url = "https://www.google.com"
     headers = {"User-Agent": "Mozilla/5.0"}
+    proxy_url = f"http://{proxy}"
+    try:
+        response = requests.get(
+            test_url,
+            proxies={"http": proxy_url, "https": proxy_url},
+            timeout=3,
+            headers=headers,
+        )
+        if response.status_code == 200:
+            print(f"[+] Valid proxy: {proxy}")
+            return {"http": proxy_url, "https": proxy_url}
+    except:
+        pass
+    return None
 
-    for proxy in PROXY_LIST:
-        proxy_url = f"http://{proxy}"
-        try:
-            response = requests.get(
-                test_url,
-                proxies={"http": proxy_url, "https": proxy_url},
-                timeout=3,
-                headers=headers,
-            )
-            if response.status_code == 200:
-                print(f"[+] Found working proxy: {proxy}")
-                return {"http": proxy_url, "https": proxy_url}
-        except Exception:
-            continue
+def get_working_proxy():
+    print("[*] Testing proxies in parallel...")
+    with ThreadPoolExecutor(max_workers=30) as executor:
+        futures = [executor.submit(check_proxy, proxy) for proxy in PROXY_LIST]
+        for future in as_completed(futures):
+            result = future.result()
+            if result:
+                print(f"[+] Found working proxy: {result}")
+                return result
     print("[-] No working proxy found.")
     return None
 
