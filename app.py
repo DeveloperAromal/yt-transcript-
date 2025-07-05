@@ -204,7 +204,7 @@ def get_working_proxy():
 
 @app.route('/')
 def home():
-    return '✅ Flask server is up and running!'
+    return 'Flask server is up and running!'
 
 @app.route('/transcript', methods=['POST'])
 def transcript():
@@ -223,7 +223,7 @@ def transcript():
         if proxy:
             transcript_list = YouTubeTranscriptApi.get_transcript(video_id, proxies=proxy)
         else:
-            print("⚠️ Using fallback without proxy...")
+            print("Using fallback without proxy...")
             transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
 
         full_transcript = " ".join([x['text'] for x in transcript_list])
